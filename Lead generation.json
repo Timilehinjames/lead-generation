@@ -1,0 +1,217 @@
+{
+  "name": "Lead generation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "incoming-lead",
+        "options": {}
+      },
+      "id": "34ceb627-4861-450c-bb2e-7191d1235f62",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        160,
+        -140
+      ],
+      "webhookId": "9060fe9f-b4a0-444d-906f-d9f53864ca8e"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"full_name\"]}}",
+              "operation": "notEmpty"
+            },
+            {
+              "value1": "={{$json[\"email\"]}}",
+              "operation": "notEmpty"
+            },
+            {
+              "value1": "={{$json[\"budget\"]}}",
+              "operation": "notEmpty"
+            },
+            {
+              "value1": "={{$json[\"interest_level\"]}}",
+              "operation": "notEmpty"
+            }
+          ]
+        }
+      },
+      "id": "4bb1e2d3-df42-44bf-9441-3d1b9f894215",
+      "name": "Validate Fields",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        340,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Scoring logic\nconst budget = parseInt($json[\"budget\"] || 0);\nconst interest = ($json[\"interest_level\"] || '').toLowerCase();\n\nlet score = 'Cold';\nif (budget >= 5000 && interest === 'high') {\n  score = 'Hot';\n} else if (budget >= 1000 && interest === 'medium') {\n  score = 'Warm';\n}\n\nitem.score = score;\nreturn item;"
+      },
+      "id": "e3204602-4c2c-4598-8034-5fe0dbaec014",
+      "name": "Score Lead",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        580,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "airtableTokenApi",
+        "operation": "update",
+        "application": {
+          "__rl": true,
+          "value": "https://airtable.com/appQqfKupmaKY4Nop/tblKjUYLwPhr1ZOAv/viwM4AJm2tK2mKh4K?blocks=hide",
+          "mode": "url"
+        },
+        "table": {
+          "__rl": true,
+          "value": "https://airtable.com/appQqfKupmaKY4Nop/tblKjUYLwPhr1ZOAv/viwM4AJm2tK2mKh4K?blocks=hide",
+          "mode": "url"
+        },
+        "id": "tblKjUYLwPhr1ZOAv",
+        "options": {}
+      },
+      "id": "4f8a4b6a-a418-4047-add2-4c505507f408",
+      "name": "Store in Airtable",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 1,
+      "position": [
+        820,
+        -320
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "jfPJbcCXFI5hxPnA",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"score\"]}}",
+              "operation": "equals",
+              "value2": "Hot"
+            }
+          ]
+        }
+      },
+      "id": "fd1b26a4-9eb5-46a4-9e17-addee37997a3",
+      "name": "IF Hot Lead",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        -440
+      ]
+    },
+    {
+      "parameters": {
+        "channel": "Pedro Luis Company",
+        "text": "New Hot Lead: {{$json[\"full_name\"]}}, Budget £{{$json[\"budget\"]}}, Interest: {{$json[\"interest_level\"]}} – Check Airtable for details.",
+        "otherOptions": {},
+        "attachments": []
+      },
+      "id": "09e234f6-6386-4589-828c-8124965faab3",
+      "name": "Send Slack Notification",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [
+        1260,
+        -260
+      ],
+      "credentials": {
+        "slackApi": {
+          "id": "d92xW5g73zT0kD6X",
+          "name": "Slack account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Fields": {
+      "main": [
+        [
+          {
+            "node": "Score Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Lead": {
+      "main": [
+        [
+          {
+            "node": "Store in Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store in Airtable": {
+      "main": [
+        [
+          {
+            "node": "IF Hot Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Hot Lead": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Slack Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7bcc88d5-9f03-48ab-b1ab-2f6db98ea8f0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "87be1f457ed658064f96036ef536f61f2fbea6b9f9b952984f8cb6e14366e238"
+  },
+  "id": "BVGeW3G3yBnwu1Nx",
+  "tags": []
+}
